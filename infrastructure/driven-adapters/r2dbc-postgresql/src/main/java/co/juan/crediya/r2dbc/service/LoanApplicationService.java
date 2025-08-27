@@ -13,8 +13,8 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class LoanApplicationService {
 
-    private final ApplicationUseCase applicationUseCase;
     private final TransactionalOperator transactionalOperator;
+    private final ApplicationUseCase applicationUseCase;
 
     public Mono<Application> createApplication(Application application) {
         return transactionalOperator.execute(transaction ->
