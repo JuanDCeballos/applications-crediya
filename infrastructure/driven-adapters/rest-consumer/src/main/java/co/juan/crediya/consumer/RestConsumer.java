@@ -3,7 +3,6 @@ package co.juan.crediya.consumer;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.user.UserGateway;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
