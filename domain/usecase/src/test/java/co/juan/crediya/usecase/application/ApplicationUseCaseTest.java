@@ -44,7 +44,7 @@ class ApplicationUseCaseTest {
     private Application application;
     private LoanApplicationDTO loanApplicationDTO;
 
-    private String userEmail = "myEmail@mail.com";
+    private final String userEmail = "myEmail@mail.com";
 
     @BeforeEach
     void initMocks() {
