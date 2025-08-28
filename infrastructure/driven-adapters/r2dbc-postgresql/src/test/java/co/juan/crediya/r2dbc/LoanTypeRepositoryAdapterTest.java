@@ -61,7 +61,7 @@ class LoanTypeRepositoryAdapterTest {
         when(repository.findById(1L)).thenReturn(Mono.just(loanTypeEntity));
         when(mapper.map(loanTypeEntity, LoanType.class)).thenReturn(loanType);
 
-        Mono<LoanType> result = loanTypeRepositoryAdapter.findById(1L);
+        Mono<LoanType> result = loanTypeRepositoryAdapter.findByIdLoanType(1L);
 
         StepVerifier.create(result)
                 .expectNextMatches(value -> value.equals(loanType))

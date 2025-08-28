@@ -3,14 +3,15 @@ package co.juan.crediya.usecase.application;
 
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.application.gateways.ApplicationRepository;
+import co.juan.crediya.model.dto.LoanApplicationDTO;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.loantype.LoanType;
+import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.function.Executable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,8 +21,6 @@ import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -38,8 +37,14 @@ class ApplicationUseCaseTest {
     @Mock
     private LoanTypeUseCase loanTypeUseCase;
 
+    @Mock
+    private UserGateway userGateway;
+
     private LoanType loanType;
     private Application application;
+    private LoanApplicationDTO loanApplicationDTO;
+
+    private String userEmail = "myEmail@mail.com";
 
     @BeforeEach
     void initMocks() {
@@ -59,6 +64,12 @@ class ApplicationUseCaseTest {
                 BigDecimal.ONE,
                 true
         );
+
+        loanApplicationDTO = new LoanApplicationDTO();
+        loanApplicationDTO.setDni("12345");
+        loanApplicationDTO.setIdLoanType(1L);
+        loanApplicationDTO.setTerm(12);
+        loanApplicationDTO.setAmount(BigDecimal.TEN);
     }
 
     @Test
@@ -74,8 +85,9 @@ class ApplicationUseCaseTest {
 
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
         when(applicationRepository.saveApplication(any(Application.class))).thenReturn(Mono.just(application));
+        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(userEmail));
 
-        Mono<Application> response = applicationUseCase.saveApplication(application);
+        Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
 
         StepVerifier.create(response)
                 .expectNextMatches(value -> value.equals(application))
@@ -83,21 +95,39 @@ class ApplicationUseCaseTest {
 
         verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
         verify(applicationRepository, times(1)).saveApplication(any(Application.class));
+        verify(userGateway, times(1)).getUserEmailByDni(anyString());
     }
 
     @Test
-    void saveApplication_shouldReturnException() {
-        application.setIdLoanType(2L);
+    void saveApplication_shouldThrowWhenUserNotFound() {
+        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(""));
+        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
 
-        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenThrow(new CrediYaException(ErrorCode.INVALID_LOAN_TYPE));
+        Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
 
-        Executable executable = () -> applicationUseCase.saveApplication(application);
+        StepVerifier.create(response)
+                .expectErrorMatches(throwable -> throwable instanceof CrediYaException &&
+                        ((CrediYaException) throwable).getErrorCode() == ErrorCode.USER_NOT_FOUND)
+                .verify();
 
-        CrediYaException exception = assertThrows(CrediYaException.class, executable);
-        assertEquals("There's not an application with that id", exception.getMessage());
+        verify(userGateway, times(1)).getUserEmailByDni(anyString());
+        verify(applicationRepository, never()).saveApplication(any());
+    }
+
+    @Test
+    void saveApplication_shouldThrowWhenInvalidLoanType() {
+        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(userEmail));
+        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.empty());
+
+        Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
+
+        StepVerifier.create(response)
+                .expectErrorMatches(throwable -> throwable instanceof CrediYaException &&
+                        ((CrediYaException) throwable).getErrorCode() == ErrorCode.INVALID_LOAN_TYPE)
+                .verify();
 
         verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
-        verify(applicationRepository, times(0)).saveApplication(any(Application.class));
+        verify(applicationRepository, never()).saveApplication(any());
     }
 
     @Test

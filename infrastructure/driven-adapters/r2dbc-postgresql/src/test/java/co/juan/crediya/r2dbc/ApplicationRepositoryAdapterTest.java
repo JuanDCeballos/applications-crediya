@@ -73,7 +73,7 @@ class ApplicationRepositoryAdapterTest {
         when(repository.findAll()).thenReturn(Flux.just(applicationEntity));
         when(mapper.map(applicationEntity, Application.class)).thenReturn(application);
 
-        Flux<Application> result = repositoryAdapter.findAll();
+        Flux<Application> result = repositoryAdapter.findAllApplications();
 
         StepVerifier.create(result)
                 .expectNextMatches(value -> value.equals(application))
@@ -86,7 +86,7 @@ class ApplicationRepositoryAdapterTest {
         when(repository.save(any(ApplicationEntity.class))).thenReturn(Mono.just(applicationEntity));
         when(mapper.map(applicationEntity, Application.class)).thenReturn(application);
 
-        Mono<Application> result = repositoryAdapter.save(application);
+        Mono<Application> result = repositoryAdapter.saveApplication(application);
 
         StepVerifier.create(result)
                 .expectNextMatches(value -> value.equals(application))
