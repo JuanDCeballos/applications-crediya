@@ -1,13 +1,13 @@
 package co.juan.crediya.api.utils;
 
 import co.juan.crediya.api.dto.LoanApplicationRequestDTO;
-import co.juan.crediya.model.application.Application;
+import co.juan.crediya.model.dto.LoanApplicationDTO;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface LoanApplicationMapper {
 
-    Application toApplication(LoanApplicationRequestDTO loanApplicationRequestDto);
+    LoanApplicationDTO toApplication(LoanApplicationRequestDTO loanApplicationRequestDto);
 
-    LoanApplicationRequestDTO toLoanApplicationRequestDto(Application user);
+    LoanApplicationRequestDTO toLoanApplicationRequestDto(LoanApplicationDTO user);
 }
