@@ -1,6 +1,7 @@
 package co.juan.crediya.api.exception;
 
 import co.juan.crediya.model.exceptions.CrediYaException;
+import co.juan.crediya.model.exceptions.ErrorCode;
 import jakarta.validation.ValidationException;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
@@ -19,19 +20,25 @@ public class GlobalErrorAttributes extends DefaultErrorAttributes {
         Map<String, Object> errorAttributes = new LinkedHashMap<>();
         Throwable error = getError(request);
 
-        int status = determineHttpStatus(error);
-        errorAttributes.put("status", status);
-        errorAttributes.put("message", error.getMessage());
-        errorAttributes.put("path", request.path());
-        errorAttributes.put("error", HttpStatus.valueOf(status).getReasonPhrase());
+        if (error instanceof CrediYaException crediYaException) {
+            ErrorCode errorCode = crediYaException.getErrorCode();
+            errorAttributes.put("status", errorCode.getHttpCode());
+            errorAttributes.put("internalStatus", errorCode.getBusinessErrorCode());
+            errorAttributes.put("message", errorCode.getMessage());
+            errorAttributes.put("error", HttpStatus.valueOf(errorCode.getHttpCode()).getReasonPhrase());
+        } else {
+            int status = determineHttpStatus(error);
+            errorAttributes.put("status", status);
+            errorAttributes.put("internalStatus", "BEC_GEN");
+            errorAttributes.put("message", error.getMessage());
+            errorAttributes.put("error", HttpStatus.valueOf(status).getReasonPhrase());
+        }
 
         return errorAttributes;
     }
 
     private int determineHttpStatus(Throwable error) {
-        if (error instanceof CrediYaException crediYaException) {
-            return crediYaException.getErrorCode().getCode();
-        } else if (error instanceof IllegalArgumentException || error instanceof ValidationException) {
+        if (error instanceof IllegalArgumentException || error instanceof ValidationException) {
             return HttpStatus.BAD_REQUEST.value();
         } else if (error instanceof IllegalStateException) {
             return HttpStatus.CONFLICT.value();

@@ -1,11 +1,9 @@
 package co.juan.crediya.api.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -13,8 +11,10 @@ import java.math.BigDecimal;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class LoanApplicationRequestDTO {
 
+    @Min(value = 0, message = "Amount should be positive")
     @NotNull(message = "amount can't be null")
     private BigDecimal amount;
     @NotNull(message = "term can't be null")

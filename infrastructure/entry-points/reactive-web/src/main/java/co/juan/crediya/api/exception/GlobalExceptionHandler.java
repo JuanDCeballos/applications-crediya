@@ -34,7 +34,7 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         Map<String, Object> errorProperties = getErrorAttributes(request, ErrorAttributeOptions.defaults());
         int status = (int) errorProperties.getOrDefault("status", 500);
 
-        ApiResponseDTO<Object> apiResponse = ApiResponseDTO.builder().status(status)
+        ApiResponseDTO<Object> apiResponse = ApiResponseDTO.builder().status((String) errorProperties.get("internalStatus"))
                 .message((String) errorProperties.get("error"))
                 .errors(Arrays.stream(((String) errorProperties.get("message"))
                         .split(", ")).toList())
