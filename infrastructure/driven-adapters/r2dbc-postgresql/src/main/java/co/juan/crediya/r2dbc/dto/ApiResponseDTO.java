@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 public class ApiResponseDTO<T> {
 
-    private Integer status;
+    private String status;
     private String message;
     private List<String> errors;
     private T data;
