@@ -1,5 +1,6 @@
 package co.juan.crediya.r2dbc.service;
 
+import co.juan.crediya.constants.OperationMessages;
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
 import co.juan.crediya.usecase.application.ApplicationUseCase;
@@ -21,8 +22,8 @@ public class LoanApplicationService {
         return transactionalOperator.execute(transaction ->
                         applicationUseCase.saveApplication(loanApplicationDTO)
                 )
-                .doOnNext(applicationSaved -> log.info("Application of {} saved successfully.", applicationSaved.getEmail()))
-                .doOnError(throwable -> log.error("Error while trying to save the application: {}", throwable.getMessage()))
+                .doOnNext(applicationSaved -> log.info(OperationMessages.SAVE_OPERATION_SUCCESS.getMessage(), applicationSaved.toString()))
+                .doOnError(throwable -> log.error(OperationMessages.SAVE_OPERATION_ERROR.getMessage(), throwable.getMessage()))
                 .single();
     }
 }
