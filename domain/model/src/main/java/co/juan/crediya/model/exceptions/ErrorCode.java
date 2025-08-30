@@ -4,16 +4,17 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
-    INVALID_LOAN_TYPE(409, "There's not an application with that id"),
-    DATABASE_ERROR(500, "An error has occurred while communicating with the database."),
-    USER_NOT_FOUND(404, "The user with dni doesn't exists.");
+    INVALID_LOAN_TYPE("BEC_NA", "There's not an application with that id", 409),
+    DATABASE_ERROR("BEC_DBE", "An error has occurred while communicating with the database.", 500),
+    USER_NOT_FOUND("BEC_NFU", "The user with dni doesn't exists.", 404);
 
-    private final int code;
+    private final String businessErrorCode;
     private final String message;
+    private final Integer httpCode;
 
-    ErrorCode(int code, String message) {
-        this.code = code;
+    ErrorCode(String businessErrorCode, String message, Integer httpCode) {
+        this.businessErrorCode = businessErrorCode;
         this.message = message;
+        this.httpCode = httpCode;
     }
-
 }
