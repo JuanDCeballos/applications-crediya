@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -53,6 +54,7 @@ public class Handler {
                     )
             )
     )
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     public Mono<ServerResponse> listenSaveApplication(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(LoanApplicationRequestDTO.class)
                 .flatMap(validationService::validateObject)
