@@ -3,6 +3,8 @@ package co.juan.crediya.r2dbc.service;
 import co.juan.crediya.constants.OperationMessages;
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
+import co.juan.crediya.security.JwtProvider;
+import co.juan.crediya.security.SecurityContextRepository;
 import co.juan.crediya.usecase.application.ApplicationUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +19,11 @@ public class LoanApplicationService {
 
     private final TransactionalOperator transactionalOperator;
     private final ApplicationUseCase applicationUseCase;
+    private final SecurityContextRepository securityContextRepository;
+    private final JwtProvider jwtProvider;
 
     public Mono<Application> createApplication(LoanApplicationDTO loanApplicationDTO) {
+        loanApplicationDTO.setEmailLogged(jwtProvider.getSubject(securityContextRepository.getToken()));
         return transactionalOperator.execute(transaction ->
                         applicationUseCase.saveApplication(loanApplicationDTO)
                 )

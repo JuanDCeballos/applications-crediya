@@ -27,6 +27,8 @@ public class ApplicationUseCase {
         return Mono.zip(userEmailByDniMono, loanTypeMono)
                 .filter(tuple -> !tuple.getT1().isBlank())
                 .switchIfEmpty(Mono.error(new CrediYaException(ErrorCode.USER_NOT_FOUND)))
+                .filter(email -> email.getT1().equalsIgnoreCase(loanApplicationDTO.getEmailLogged()))
+                .switchIfEmpty(Mono.error(new CrediYaException(ErrorCode.USER_NOT_MATCH)))
                 .filter(Tuple2::getT2)
                 .switchIfEmpty(Mono.error(new CrediYaException(ErrorCode.INVALID_LOAN_TYPE)))
                 .flatMap(tuple ->
