@@ -44,7 +44,7 @@ class ApplicationUseCaseTest {
     private Application application;
     private LoanApplicationDTO loanApplicationDTO;
 
-    private final String userEmail = "myEmail@mail.com";
+    private final String userEmail = "myEmail@email.com";
 
     @BeforeEach
     void initMocks() {
@@ -70,6 +70,7 @@ class ApplicationUseCaseTest {
         loanApplicationDTO.setIdLoanType(1L);
         loanApplicationDTO.setTerm(12);
         loanApplicationDTO.setAmount(BigDecimal.TEN);
+        loanApplicationDTO.setEmailLogged("myEmail@email.com");
     }
 
     @Test

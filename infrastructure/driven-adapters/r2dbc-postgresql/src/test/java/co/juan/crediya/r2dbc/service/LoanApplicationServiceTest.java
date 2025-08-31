@@ -2,6 +2,8 @@ package co.juan.crediya.r2dbc.service;
 
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
+import co.juan.crediya.security.JwtProvider;
+import co.juan.crediya.security.SecurityContextRepository;
 import co.juan.crediya.usecase.application.ApplicationUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,11 +32,20 @@ class LoanApplicationServiceTest {
     @Mock
     ApplicationUseCase applicationUseCase;
 
+    @Mock
+    SecurityContextRepository securityContextRepository;
+
+    @Mock
+    JwtProvider jwtProvider;
+
     private Application application;
     private LoanApplicationDTO loanApplicationDTO;
 
     @BeforeEach
     void initMocks() {
+        when(securityContextRepository.getToken()).thenReturn("eyJh");
+        when(jwtProvider.getSubject(anyString())).thenReturn("myEmail@main.com");
+
         application = new Application();
         application.setIdApplication(1L);
         application.setTerm(1);
@@ -48,6 +59,7 @@ class LoanApplicationServiceTest {
         loanApplicationDTO.setIdLoanType(1L);
         loanApplicationDTO.setTerm(12);
         loanApplicationDTO.setAmount(new BigDecimal("4500000"));
+        loanApplicationDTO.setEmailLogged("myEmail@main.com");
     }
 
     @Test
