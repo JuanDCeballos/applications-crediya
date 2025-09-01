@@ -7,8 +7,9 @@ import co.juan.crediya.r2dbc.helper.ReactiveAdapterOperations;
 import co.juan.crediya.r2dbc.repository.ApplicationReactiveRepository;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Repository
 public class ApplicationRepositoryAdapter extends ReactiveAdapterOperations<
@@ -27,7 +28,12 @@ public class ApplicationRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
-    public Flux<Application> findAllApplications() {
-        return findAll();
+    public Mono<List<Application>> findAllApplications(long offset, int limit) {
+        return repository.findAllByPage(offset, limit).collectList();
+    }
+
+    @Override
+    public Mono<Long> countAll() {
+        return repository.count();
     }
 }

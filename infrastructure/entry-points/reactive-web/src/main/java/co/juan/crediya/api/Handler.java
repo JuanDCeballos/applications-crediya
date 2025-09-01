@@ -6,6 +6,7 @@ import co.juan.crediya.api.utils.ValidationService;
 import co.juan.crediya.constants.OperationMessages;
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.r2dbc.dto.ApiResponseDTO;
+import co.juan.crediya.r2dbc.dto.PageResponse;
 import co.juan.crediya.r2dbc.service.LoanApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,6 +21,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 @Component
 @RequiredArgsConstructor
@@ -83,6 +88,24 @@ public class Handler {
             }
     )
     public Mono<ServerResponse> listenGetAllApplications(ServerRequest serverRequest) {
-        return ServerResponse.ok().bodyValue("");
+        int page = serverRequest.queryParam("page").map(Integer::parseInt).orElse(0);
+        int size = serverRequest.queryParam("size").map(Integer::parseInt).orElse(10);
+        long offset = (long) page * size;
+
+        Mono<List<Application>> applications = loanApplicationService.getAllApplications(offset, size);
+        Mono<Long> total = loanApplicationService.countAll();
+
+        return Mono.zip(applications, total)
+                .flatMap(tuple -> {
+                    PageResponse<Application> response = new PageResponse<>(
+                            tuple.getT1(),
+                            page,
+                            size,
+                            tuple.getT2()
+                    );
+                    return ServerResponse.ok()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(response);
+                });
     }
 }

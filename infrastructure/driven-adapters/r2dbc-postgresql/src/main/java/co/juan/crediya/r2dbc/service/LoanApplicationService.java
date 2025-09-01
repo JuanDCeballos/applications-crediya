@@ -10,7 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,5 +33,13 @@ public class LoanApplicationService {
                 .doOnNext(applicationSaved -> log.info(OperationMessages.SAVE_OPERATION_SUCCESS.getMessage(), applicationSaved.toString()))
                 .doOnError(throwable -> log.error(OperationMessages.SAVE_OPERATION_ERROR.getMessage(), throwable.getMessage()))
                 .single();
+    }
+
+    public Mono<List<Application>> getAllApplications(long offset, int limit) {
+        return applicationUseCase.getAllApplications(offset, limit);
+    }
+
+    public Mono<Long> countAll() {
+        return applicationUseCase.countAll();
     }
 }

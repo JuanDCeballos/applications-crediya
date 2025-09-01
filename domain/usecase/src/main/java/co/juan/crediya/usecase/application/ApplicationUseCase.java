@@ -8,9 +8,10 @@ import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 public class ApplicationUseCase {
@@ -41,7 +42,11 @@ public class ApplicationUseCase {
                 );
     }
 
-    public Flux<Application> getAllApplications() {
-        return applicationRepository.findAllApplications();
+    public Mono<List<Application>> getAllApplications(long offset, int limit) {
+        return applicationRepository.findAllApplications(offset, limit);
+    }
+
+    public Mono<Long> countAll() {
+        return applicationRepository.countAll();
     }
 }
