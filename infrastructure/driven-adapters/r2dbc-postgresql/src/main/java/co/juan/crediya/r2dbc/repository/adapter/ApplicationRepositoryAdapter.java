@@ -34,6 +34,6 @@ public class ApplicationRepositoryAdapter extends ReactiveAdapterOperations<
 
     @Override
     public Mono<Long> countAll() {
-        return repository.count();
+        return repository.countAll();
     }
 }
