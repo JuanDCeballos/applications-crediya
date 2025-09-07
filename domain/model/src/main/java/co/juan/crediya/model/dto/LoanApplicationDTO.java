@@ -16,4 +16,5 @@ public class LoanApplicationDTO {
     private BigDecimal amount;
     private Integer term;
     private Long idLoanType;
+    private String emailLogged;
 }
