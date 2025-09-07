@@ -1,6 +1,7 @@
 package co.juan.crediya.r2dbc.repository.adapter;
 
 import co.juan.crediya.model.application.Application;
+import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.model.application.gateways.ApplicationRepository;
 import co.juan.crediya.r2dbc.entity.ApplicationEntity;
 import co.juan.crediya.r2dbc.helper.ReactiveAdapterOperations;
@@ -28,12 +29,12 @@ public class ApplicationRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
-    public Mono<List<Application>> findAllApplications(long offset, int limit) {
-        return repository.findAllByPage(offset, limit).collectList();
+    public Mono<List<FilteredApplicationDto>> findAllApplicationsPaging(long status, long offset, int limit) {
+        return repository.findAllByPage(status, offset, limit).collectList();
     }
 
     @Override
-    public Mono<Long> countAll() {
-        return repository.countAll();
+    public Mono<Long> countAll(long status) {
+        return repository.countAll(status);
     }
 }

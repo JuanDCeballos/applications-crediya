@@ -1,12 +1,13 @@
 package co.juan.crediya.usecase.application;
 
-
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.application.gateways.ApplicationRepository;
+import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.loantype.LoanType;
+import co.juan.crediya.model.user.User;
 import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,12 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -43,8 +46,15 @@ class ApplicationUseCaseTest {
     private LoanType loanType;
     private Application application;
     private LoanApplicationDTO loanApplicationDTO;
+    private User user;
 
-    private final String userEmail = "myEmail@email.com";
+    private final FilteredApplicationDto filteredApplicationDto =
+            new FilteredApplicationDto(new BigDecimal("1000"), 12,
+                    "juan.juan@gmail.com", "Pedro",
+                    "Libre inversion", new BigDecimal(2),
+                    "Pendiente de revision", new BigDecimal(10000),
+                    new BigDecimal(100));
+    private final long status = 1L;
 
     @BeforeEach
     void initMocks() {
@@ -52,7 +62,7 @@ class ApplicationUseCaseTest {
         application.setIdApplication(1L);
         application.setAmount(BigDecimal.TEN);
         application.setTerm(12);
-        application.setEmail("myEmail@email.com");
+        application.setEmail("juan.ceballos@correo.com");
         application.setIdState(1L);
         application.setIdLoanType(1L);
 
@@ -66,11 +76,22 @@ class ApplicationUseCaseTest {
         );
 
         loanApplicationDTO = new LoanApplicationDTO();
-        loanApplicationDTO.setDni("12345");
+        loanApplicationDTO.setDni("1027384098");
         loanApplicationDTO.setIdLoanType(1L);
         loanApplicationDTO.setTerm(12);
         loanApplicationDTO.setAmount(BigDecimal.TEN);
-        loanApplicationDTO.setEmailLogged("myEmail@email.com");
+        loanApplicationDTO.setEmailLogged("juan.ceballos@correo.com");
+
+        user = new User();
+        user.setName("Juan");
+        user.setLastName("Ceballos");
+        user.setBirthDate(LocalDateTime.of(2025, 8, 25, 20, 46));
+        user.setEmail("juan.ceballos@correo.com");
+        user.setAddress("CRA 97 AA #55-33");
+        user.setBaseSalary(BigDecimal.TEN);
+        user.setPhone("3210938475");
+        user.setDni("1027384098");
+        user.setRole(1L);
     }
 
     @Test
@@ -86,7 +107,7 @@ class ApplicationUseCaseTest {
 
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
         when(applicationRepository.saveApplication(any(Application.class))).thenReturn(Mono.just(application));
-        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(userEmail));
+        when(userGateway.getUserByDni(anyString())).thenReturn(Mono.just(user));
 
         Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
 
@@ -96,12 +117,12 @@ class ApplicationUseCaseTest {
 
         verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
         verify(applicationRepository, times(1)).saveApplication(any(Application.class));
-        verify(userGateway, times(1)).getUserEmailByDni(anyString());
+        verify(userGateway, times(1)).getUserByDni(anyString());
     }
 
     @Test
     void saveApplication_shouldThrowWhenUserNotFound() {
-        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(""));
+        when(userGateway.getUserByDni(anyString())).thenReturn(Mono.empty());
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
 
         Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
@@ -111,13 +132,13 @@ class ApplicationUseCaseTest {
                         ((CrediYaException) throwable).getErrorCode() == ErrorCode.USER_NOT_FOUND)
                 .verify();
 
-        verify(userGateway, times(1)).getUserEmailByDni(anyString());
+        verify(userGateway, times(1)).getUserByDni(anyString());
         verify(applicationRepository, never()).saveApplication(any());
     }
 
     @Test
     void saveApplication_shouldThrowWhenInvalidLoanType() {
-        when(userGateway.getUserEmailByDni(anyString())).thenReturn(Mono.just(userEmail));
+        when(userGateway.getUserByDni(anyString())).thenReturn(Mono.just(user));
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.empty());
 
         Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
@@ -133,15 +154,38 @@ class ApplicationUseCaseTest {
 
     @Test
     void getAllApplications_shouldReturnSomething() {
-        when(applicationRepository.findAllApplications()).thenReturn(Flux.just(application));
+        List<FilteredApplicationDto> applications = List.of(filteredApplicationDto);
 
-        Flux<Application> response = applicationUseCase.getAllApplications();
+        when(applicationRepository.findAllApplicationsPaging(anyLong(), anyLong(), anyInt())).thenReturn(Mono.just(applications));
+        when(userGateway.getUserByEmail(anyString())).thenReturn(Mono.just(user));
+
+        long offset = 0L;
+        int limit = 5;
+        Mono<List<FilteredApplicationDto>> response = applicationUseCase.getAllApplicationsPaging(status, offset, limit);
 
         StepVerifier.create(response)
-                .expectNextMatches(value -> value.equals(application))
+                .assertNext(list -> {
+                    assertThat(list).hasSize(1);
+                    FilteredApplicationDto dto = list.get(0);
+                    assertThat(dto.name()).isEqualTo("Juan");
+                    assertThat(dto.baseSalary()).isEqualTo(BigDecimal.TEN);
+                    assertThat(dto.monthlyRequestAmount()).isEqualTo(new BigDecimal("166"));
+                })
                 .verifyComplete();
 
-        verify(applicationRepository, times(1)).findAllApplications();
+        verify(applicationRepository, times(1)).findAllApplicationsPaging(anyLong(), anyLong(), anyInt());
+        verify(userGateway, times(1)).getUserByEmail(anyString());
     }
 
+    @Test
+    void countAll() {
+        Long allRows = 21L;
+        when(applicationRepository.countAll(anyLong())).thenReturn(Mono.just(allRows));
+
+        Mono<Long> response = applicationUseCase.countAll(status);
+
+        StepVerifier.create(response)
+                .expectNextMatches(value -> value.equals(allRows))
+                .verifyComplete();
+    }
 }

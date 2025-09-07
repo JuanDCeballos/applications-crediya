@@ -1,6 +1,7 @@
 package co.juan.crediya.r2dbc;
 
 import co.juan.crediya.model.application.Application;
+import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.r2dbc.entity.ApplicationEntity;
 import co.juan.crediya.r2dbc.repository.ApplicationReactiveRepository;
 import co.juan.crediya.r2dbc.repository.adapter.ApplicationRepositoryAdapter;
@@ -16,9 +17,10 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +37,13 @@ class ApplicationRepositoryAdapterTest {
 
     private ApplicationEntity applicationEntity;
     private Application application;
+    private final FilteredApplicationDto filteredApplicationDto =
+            new FilteredApplicationDto(new BigDecimal("1000"), 12,
+                    "juan.juan@gmail.com", "Pedro",
+                    "Libre inversion", new BigDecimal(2),
+                    "Pendiente de revision", new BigDecimal(10000),
+                    new BigDecimal(100));
+    long status = 1L;
 
     @BeforeEach
     void initMocks() {
@@ -57,7 +66,6 @@ class ApplicationRepositoryAdapterTest {
 
     @Test
     void mustFindValueById() {
-
         when(repository.findById(1L)).thenReturn(Mono.just(applicationEntity));
         when(mapper.map(applicationEntity, Application.class)).thenReturn(application);
 
@@ -70,13 +78,20 @@ class ApplicationRepositoryAdapterTest {
 
     @Test
     void mustFindAllValues() {
-        when(repository.findAll()).thenReturn(Flux.just(applicationEntity));
-        when(mapper.map(applicationEntity, Application.class)).thenReturn(application);
+        when(repository.findAllByPage(anyLong(), anyLong(), anyInt())).thenReturn(Flux.just(filteredApplicationDto));
 
-        Flux<Application> result = repositoryAdapter.findAllApplications();
+        long offset = 0L;
+        int limit = 5;
+        Mono<List<FilteredApplicationDto>> result = repositoryAdapter.findAllApplicationsPaging(status, offset, limit);
 
         StepVerifier.create(result)
-                .expectNextMatches(value -> value.equals(application))
+                .assertNext(list -> {
+                    assertThat(list).hasSize(1);
+                    FilteredApplicationDto dto = list.get(0);
+                    assertThat(dto.name()).isEqualTo("Pedro");
+                    assertThat(dto.baseSalary()).isEqualTo(new BigDecimal(10000));
+                    assertThat(dto.monthlyRequestAmount()).isEqualTo(new BigDecimal("100"));
+                })
                 .verifyComplete();
     }
 
@@ -90,6 +105,18 @@ class ApplicationRepositoryAdapterTest {
 
         StepVerifier.create(result)
                 .expectNextMatches(value -> value.equals(application))
+                .verifyComplete();
+    }
+
+    @Test
+    void mustCountAllValues() {
+        Long allRows = 21L;
+        when(repository.countAll(anyLong())).thenReturn(Mono.just(allRows));
+
+        Mono<Long> result = repositoryAdapter.countAll(status);
+
+        StepVerifier.create(result)
+                .expectNextMatches(value -> value.equals(allRows))
                 .verifyComplete();
     }
 }
