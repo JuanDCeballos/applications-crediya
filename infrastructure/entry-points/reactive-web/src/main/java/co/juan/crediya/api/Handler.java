@@ -5,6 +5,9 @@ import co.juan.crediya.api.utils.LoanApplicationMapper;
 import co.juan.crediya.api.utils.ValidationService;
 import co.juan.crediya.constants.OperationMessages;
 import co.juan.crediya.model.application.Application;
+import co.juan.crediya.model.dto.FilteredApplicationDto;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
 import co.juan.crediya.r2dbc.dto.ApiResponseDTO;
 import co.juan.crediya.r2dbc.service.LoanApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -53,6 +57,7 @@ public class Handler {
                     )
             )
     )
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     public Mono<ServerResponse> listenSaveApplication(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(LoanApplicationRequestDTO.class)
                 .flatMap(validationService::validateObject)
@@ -73,14 +78,25 @@ public class Handler {
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "successful operation",
+                            description = "Get all applications successfully.",
                             content = @Content(
-                                    schema = @Schema(implementation = ApiResponseDTO.class)
+                                    schema = @Schema(implementation = Page.class)
                             )
                     )
             }
     )
+    @PreAuthorize("hasAuthority('ADVISOR')")
     public Mono<ServerResponse> listenGetAllApplications(ServerRequest serverRequest) {
-        return ServerResponse.ok().bodyValue("");
+        int page = serverRequest.queryParam("page").map(Integer::parseInt).orElse(0);
+        int size = serverRequest.queryParam("size").map(Integer::parseInt).orElse(10);
+        int state = serverRequest.queryParam("state").map(Integer::parseInt).orElse(1);
+        long offset = (long) page * size;
+
+        Mono<Page<FilteredApplicationDto>> pageMono = loanApplicationService.getAllApplicationsPaging(offset, size, state);
+
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(pageMono, new ParameterizedTypeReference<Page<FilteredApplicationDto>>() {
+                });
     }
 }

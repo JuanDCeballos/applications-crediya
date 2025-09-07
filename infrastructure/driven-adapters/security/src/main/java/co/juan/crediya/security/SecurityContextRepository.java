@@ -1,0 +1,43 @@
+package co.juan.crediya.security;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.web.server.context.ServerSecurityContextRepository;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+@RequiredArgsConstructor
+@Getter
+public class SecurityContextRepository implements ServerSecurityContextRepository {
+
+    private final JwtAuthenticationManager jwtAuthenticationManager;
+    private String token = null;
+
+
+    @Override
+    public Mono<Void> save(ServerWebExchange exchange, SecurityContext context) {
+        return Mono.empty();
+    }
+
+    @Override
+    public Mono<SecurityContext> load(ServerWebExchange exchange) {
+        token = null;
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+
+            return jwtAuthenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(token, token))
+                    .map(SecurityContextImpl::new);
+        }
+
+        return Mono.empty();
+    }
+}
