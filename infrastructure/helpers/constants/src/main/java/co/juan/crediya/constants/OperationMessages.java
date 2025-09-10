@@ -7,7 +7,8 @@ public enum OperationMessages {
     REQUEST_RECEIVED("Request received for entity {}"),
     SAVE_OPERATION_SUCCESS("Entity saved successfully {}"),
     SAVE_OPERATION_ERROR("Error while saving entity {}"),
-    RECORD_CREATED_SUCCESSFULLY("Record created successfully");
+    RECORD_CREATED_SUCCESSFULLY("Record created successfully"),
+    RECORD_UPDATED_SUCCESSFULLY("Record updated successfully");
 
 
     private final String message;
