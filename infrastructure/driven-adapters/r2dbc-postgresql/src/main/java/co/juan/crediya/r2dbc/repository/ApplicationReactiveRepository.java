@@ -1,5 +1,6 @@
 package co.juan.crediya.r2dbc.repository;
 
+import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.r2dbc.entity.ApplicationEntity;
 import org.springframework.data.r2dbc.repository.Query;
@@ -12,6 +13,7 @@ public interface ApplicationReactiveRepository extends ReactiveCrudRepository<Ap
 
     @Query("""
              SELECT
+                 a.id_application AS idApplication,
                  a.amount,
                  a.term,
                  a.email,
@@ -28,4 +30,12 @@ public interface ApplicationReactiveRepository extends ReactiveCrudRepository<Ap
 
     @Query("SELECT COUNT(*) FROM applications a WHERE a.id_state = :status")
     Mono<Long> countAll(long status);
+
+    @Query("""
+                UPDATE applications 
+                SET id_state = :state 
+                WHERE id_application = :application
+                RETURNING *
+            """)
+    Mono<Application> updateStatusApplication(long state, long application);
 }

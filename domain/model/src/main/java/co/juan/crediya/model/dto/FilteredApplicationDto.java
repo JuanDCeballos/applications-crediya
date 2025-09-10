@@ -2,7 +2,8 @@ package co.juan.crediya.model.dto;
 
 import java.math.BigDecimal;
 
-public record FilteredApplicationDto(BigDecimal amount,
+public record FilteredApplicationDto(Long idapplication,
+                                     BigDecimal amount,
                                      int term,
                                      String email,
                                      String name,
