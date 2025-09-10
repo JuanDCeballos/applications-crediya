@@ -38,7 +38,7 @@ class ApplicationRepositoryAdapterTest {
     private ApplicationEntity applicationEntity;
     private Application application;
     private final FilteredApplicationDto filteredApplicationDto =
-            new FilteredApplicationDto(new BigDecimal("1000"), 12,
+            new FilteredApplicationDto(1L, new BigDecimal("1000"), 12,
                     "juan.juan@gmail.com", "Pedro",
                     "Libre inversion", new BigDecimal(2),
                     "Pendiente de revision", new BigDecimal(10000),
