@@ -9,6 +9,7 @@ import co.juan.crediya.model.dto.UpdateLoanApplicationRequestDto;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.loantype.LoanType;
+import co.juan.crediya.model.notification.NotificationGateway;
 import co.juan.crediya.model.user.User;
 import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
@@ -48,6 +49,9 @@ class ApplicationUseCaseTest {
 
     @Mock
     private UserGateway userGateway;
+
+    @Mock
+    NotificationGateway notificationGateway;
 
     private LoanType loanType;
     private Application application;
@@ -207,6 +211,7 @@ class ApplicationUseCaseTest {
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
         when(applicationRepository.updateLoanApplication(any(UpdateLoanApplicationRequestDto.class)))
                 .thenReturn(Mono.just(application));
+        when(notificationGateway.sendNotification(any(FilteredApplicationDto.class))).thenReturn(Mono.empty());
 
         Mono<FilteredApplicationDto> response = applicationUseCase.updateApplication(updateLoanApplicationRequestDto);
 

@@ -9,6 +9,7 @@ import co.juan.crediya.model.dto.UpdateLoanApplicationRequestDto;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.loantype.LoanType;
+import co.juan.crediya.model.notification.NotificationGateway;
 import co.juan.crediya.model.user.User;
 import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
@@ -28,6 +29,7 @@ public class ApplicationUseCase {
     private final ApplicationRepository applicationRepository;
     private final LoanTypeUseCase loanTypeUseCase;
     private final UserGateway userGateway;
+    private final NotificationGateway notificationGateway;
 
     public Mono<Application> saveApplication(LoanApplicationDTO loanApplicationDTO) {
 
@@ -83,37 +85,45 @@ public class ApplicationUseCase {
         return applicationRepository.countAll(status);
     }
 
-    public Mono<FilteredApplicationDto> updateApplication(UpdateLoanApplicationRequestDto updateLoanApplicationRequestDto) {
-        return applicationRepository.findApplicationById(updateLoanApplicationRequestDto.getIdApplication())
+    public Mono<FilteredApplicationDto> updateApplication(UpdateLoanApplicationRequestDto dto) {
+        return applicationRepository.findApplicationById(dto.getIdApplication())
                 .filter(Objects::nonNull)
                 .switchIfEmpty(Mono.error(new CrediYaException(ErrorCode.INVALID_LOAN_TYPE)))
-                .filter(application -> application.getIdState().compareTo(updateLoanApplicationRequestDto.getIdState()) != 0)
+                .filter(app -> app.getIdState().compareTo(dto.getIdState()) != 0)
                 .switchIfEmpty(Mono.error(new CrediYaException(ErrorCode.STATUS_NOT_CHANGED)))
-                .flatMap(application -> {
+                .flatMap(app -> {
 
-                    Mono<User> userDtoMono = userGateway.getUserByEmail(application.getEmail());
-                    Mono<LoanType> loanTypeMono = loanTypeUseCase.getLoanTypeById(application.getIdLoanType());
-                    Mono<Application> applicationMono = applicationRepository.updateLoanApplication(updateLoanApplicationRequestDto);
+                    Mono<User> userMono = userGateway.getUserByEmail(app.getEmail());
+                    Mono<LoanType> loanTypeMono = loanTypeUseCase.getLoanTypeById(app.getIdLoanType());
+                    Mono<Application> applicationMono = applicationRepository.updateLoanApplication(dto);
 
-                    return Mono.zip(applicationMono, userDtoMono, loanTypeMono)
-                            .flatMap(tupleData -> {
+                    return Mono.zip(applicationMono, userMono, loanTypeMono)
+                            .flatMap(tuple -> {
+                                Application applicationUpdated = tuple.getT1();
+                                User user = tuple.getT2();
+                                LoanType loanType = tuple.getT3();
+                                String estado = StatusEnum.getById(dto.getIdState()).getName();
 
-                                Application applicationUpdated = tupleData.getT1();
-
-                                return Mono.just(new FilteredApplicationDto(
+                                FilteredApplicationDto filteredDto = new FilteredApplicationDto(
                                         applicationUpdated.getIdApplication(),
                                         applicationUpdated.getAmount(),
                                         applicationUpdated.getTerm(),
                                         applicationUpdated.getEmail(),
-                                        tupleData.getT2().getName(),
-                                        applicationUpdated.getIdLoanType().toString(),
-                                        tupleData.getT3().getInterestRate(),
-                                        StatusEnum.getById(updateLoanApplicationRequestDto.getIdState()).getName(),
-                                        tupleData.getT2().getBaseSalary(),
+                                        user.getName(),
+                                        loanType.getName(),
+                                        loanType.getInterestRate(),
+                                        estado,
+                                        user.getBaseSalary(),
                                         applicationUpdated.getAmount()
-                                                .multiply(tupleData.getT3().getInterestRate())
+                                                .multiply(loanType.getInterestRate())
                                                 .divide(new BigDecimal(applicationUpdated.getTerm()), RoundingMode.FLOOR)
-                                ));
+                                );
+
+                                if (estado.equalsIgnoreCase(StatusEnum.APPROVED.getName()) || estado.equalsIgnoreCase(StatusEnum.REJECTED.getName())) {
+                                    notificationGateway.sendNotification(filteredDto).subscribe();
+                                }
+
+                                return Mono.just(filteredDto);
                             });
                 });
     }
