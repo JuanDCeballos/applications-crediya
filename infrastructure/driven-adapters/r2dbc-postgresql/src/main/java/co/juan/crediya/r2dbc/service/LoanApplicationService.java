@@ -4,6 +4,7 @@ import co.juan.crediya.constants.OperationMessages;
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
+import co.juan.crediya.model.dto.UpdateLoanApplicationRequestDto;
 import co.juan.crediya.security.JwtProvider;
 import co.juan.crediya.security.SecurityContextRepository;
 import co.juan.crediya.usecase.application.ApplicationUseCase;
@@ -52,5 +53,13 @@ public class LoanApplicationService {
 
     public Mono<Long> countAll(long status) {
         return applicationUseCase.countAll(status);
+    }
+
+    public Mono<FilteredApplicationDto> updateApplication(UpdateLoanApplicationRequestDto loanApplicationRequestDto) {
+        return transactionalOperator.execute(transaction ->
+                        applicationUseCase.updateApplication(loanApplicationRequestDto)
+                ).doOnNext(applicationUpdated -> log.info(OperationMessages.SAVE_OPERATION_SUCCESS.getMessage(), applicationUpdated.toString()))
+                .doOnError(throwable -> log.error(OperationMessages.SAVE_OPERATION_ERROR.getMessage(), throwable.getMessage()))
+                .single();
     }
 }
