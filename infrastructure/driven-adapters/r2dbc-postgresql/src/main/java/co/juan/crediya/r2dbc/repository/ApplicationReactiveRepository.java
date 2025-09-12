@@ -38,4 +38,21 @@ public interface ApplicationReactiveRepository extends ReactiveCrudRepository<Ap
                 RETURNING *
             """)
     Mono<Application> updateStatusApplication(long state, long application);
+
+    @Query("""
+             SELECT
+                 a.id_application AS idApplication,
+                 a.amount,
+                 a.term,
+                 a.email,
+                 t.name AS loanType,
+                 t.interest_rate AS interestRate,
+                 s.name AS status
+             FROM applications a
+             INNER JOIN loan_type t ON a.id_loan_type = t.id_loan_type
+             INNER JOIN states s ON a.id_state = s.id_state
+             WHERE a.email = :email
+             AND a.id_state = :idState
+            """)
+    Flux<FilteredApplicationDto> getApplicationsByUserEmailAndState(String email, Long idState);
 }
