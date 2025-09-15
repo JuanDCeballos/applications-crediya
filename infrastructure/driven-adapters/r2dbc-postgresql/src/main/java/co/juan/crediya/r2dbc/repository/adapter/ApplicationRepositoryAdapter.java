@@ -9,6 +9,7 @@ import co.juan.crediya.r2dbc.helper.ReactiveAdapterOperations;
 import co.juan.crediya.r2dbc.repository.ApplicationReactiveRepository;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -47,5 +48,10 @@ public class ApplicationRepositoryAdapter extends ReactiveAdapterOperations<
     @Override
     public Mono<Application> updateLoanApplication(UpdateLoanApplicationRequestDto updateLoanApplicationRequestDto) {
         return repository.updateStatusApplication(updateLoanApplicationRequestDto.getIdState(), updateLoanApplicationRequestDto.getIdApplication());
+    }
+
+    @Override
+    public Flux<FilteredApplicationDto> getApplicationsByUserEmailAndState(String email, Long idState) {
+        return repository.getApplicationsByUserEmailAndState(email, idState);
     }
 }

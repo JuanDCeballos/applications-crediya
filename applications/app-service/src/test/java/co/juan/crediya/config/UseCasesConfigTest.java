@@ -1,6 +1,7 @@
 package co.juan.crediya.config;
 
 import co.juan.crediya.model.application.gateways.ApplicationRepository;
+import co.juan.crediya.model.debtCapacity.DebtCapacityGateway;
 import co.juan.crediya.model.loantype.gateways.LoanTypeRepository;
 import co.juan.crediya.model.notification.NotificationGateway;
 import co.juan.crediya.model.states.gateways.StatesRepository;
@@ -65,6 +66,11 @@ class UseCasesConfigTest {
         @Bean
         public NotificationGateway notificationGateway() {
             return Mockito.mock(NotificationGateway.class);
+        }
+
+        @Bean
+        public DebtCapacityGateway debtCapacityGateway() {
+            return Mockito.mock(DebtCapacityGateway.class);
         }
     }
 
