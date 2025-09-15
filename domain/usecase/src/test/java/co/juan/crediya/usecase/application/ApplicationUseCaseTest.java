@@ -151,6 +151,33 @@ class ApplicationUseCaseTest {
     }
 
     @Test
+    void saveApplication_shouldSave_when_automaticvalidation_false() {
+        loanType = new LoanType(
+                1L,
+                "Libre Inversion",
+                BigDecimal.ONE,
+                BigDecimal.TEN,
+                BigDecimal.ONE,
+                false
+        );
+
+        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
+        when(applicationRepository.saveApplication(any(Application.class))).thenReturn(Mono.just(application));
+        when(userGateway.getUserByDni(anyString())).thenReturn(Mono.just(user));
+
+        Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
+
+        StepVerifier.create(response)
+                .expectNextMatches(value -> value.equals(application))
+                .verifyComplete();
+
+        verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
+        verify(applicationRepository, times(1)).saveApplication(any(Application.class));
+        verify(userGateway, times(1)).getUserByDni(anyString());
+        verify(applicationRepository, times(0)).getApplicationsByUserEmailAndState(anyString(), anyLong());
+    }
+
+    @Test
     void saveApplication_shouldThrowWhenUserNotFound() {
         when(userGateway.getUserByDni(anyString())).thenReturn(Mono.empty());
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
