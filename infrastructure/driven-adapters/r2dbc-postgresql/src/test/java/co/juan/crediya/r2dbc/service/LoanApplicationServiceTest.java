@@ -3,6 +3,7 @@ package co.juan.crediya.r2dbc.service;
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.dto.FilteredApplicationDto;
 import co.juan.crediya.model.dto.LoanApplicationDTO;
+import co.juan.crediya.model.dto.UpdateLoanApplicationRequestDto;
 import co.juan.crediya.security.JwtProvider;
 import co.juan.crediya.security.SecurityContextRepository;
 import co.juan.crediya.usecase.application.ApplicationUseCase;
@@ -46,12 +47,13 @@ class LoanApplicationServiceTest {
     private LoanApplicationDTO loanApplicationDTO;
     private final Long allRows = 21L;
     private final FilteredApplicationDto filteredApplicationDto =
-            new FilteredApplicationDto(new BigDecimal("1000"), 12,
+            new FilteredApplicationDto(1L, new BigDecimal("1000"), 12,
                     "juan.juan@gmail.com", "Pedro",
                     "Libre inversion", new BigDecimal(2),
                     "Pendiente de revision", new BigDecimal(10000),
                     new BigDecimal(100));
     private final long status = 1L;
+    private UpdateLoanApplicationRequestDto updateLoanApplicationRequestDto;
 
     @BeforeEach
     void initMocks() {
@@ -69,6 +71,10 @@ class LoanApplicationServiceTest {
         loanApplicationDTO.setTerm(12);
         loanApplicationDTO.setAmount(new BigDecimal("4500000"));
         loanApplicationDTO.setEmailLogged("myEmail@main.com");
+
+        updateLoanApplicationRequestDto = new UpdateLoanApplicationRequestDto();
+        updateLoanApplicationRequestDto.setIdApplication(19L);
+        updateLoanApplicationRequestDto.setIdState(4L);
     }
 
     @Test
@@ -142,5 +148,23 @@ class LoanApplicationServiceTest {
         StepVerifier.create(result)
                 .expectNextMatches(value -> value.equals(allRows))
                 .verifyComplete();
+    }
+
+    @Test
+    void updateLoanApplication() {
+        when(applicationUseCase.updateApplication(any(UpdateLoanApplicationRequestDto.class)))
+                .thenReturn(Mono.just(filteredApplicationDto));
+
+        when(transactionalOperator.execute(any(TransactionCallback.class)))
+                .thenAnswer(invocation -> {
+                    TransactionCallback<?> callback = invocation.getArgument(0);
+                    return ((Mono<FilteredApplicationDto>) callback.doInTransaction(null)).flux();
+                });
+
+        Mono<FilteredApplicationDto> result = loanApplicationService.updateApplication(updateLoanApplicationRequestDto);
+        StepVerifier.create(result)
+                .expectNext(filteredApplicationDto)
+                .verifyComplete();
+
     }
 }

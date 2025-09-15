@@ -10,7 +10,8 @@ public enum ErrorCode {
     USER_EMAIL_NOT_FOUND("BEC_NFU", "The user with email doesn't exists.", 404),
     BAD_TOKEN("BEC_BT", "No token has been sent in the request.", 403),
     INVALID_TOKEN("BEC_IT", "Invalid authentication in the request.", 403),
-    USER_NOT_MATCH("BEC_UNM", "Can't do a loan application for other user", 409);
+    USER_NOT_MATCH("BEC_UNM", "Can't do a loan application for other user", 409),
+    STATUS_NOT_CHANGED("BEC_STC", "The application with this id already has this status.", 409);
 
     private final String businessErrorCode;
     private final String message;

@@ -2,28 +2,34 @@ package co.juan.crediya.usecase.application;
 
 import co.juan.crediya.model.application.Application;
 import co.juan.crediya.model.application.gateways.ApplicationRepository;
-import co.juan.crediya.model.dto.FilteredApplicationDto;
-import co.juan.crediya.model.dto.LoanApplicationDTO;
+import co.juan.crediya.model.debtCapacity.DebtCapacityGateway;
+import co.juan.crediya.model.dto.*;
 import co.juan.crediya.model.exceptions.CrediYaException;
 import co.juan.crediya.model.exceptions.ErrorCode;
 import co.juan.crediya.model.loantype.LoanType;
+import co.juan.crediya.model.notification.NotificationGateway;
 import co.juan.crediya.model.user.User;
 import co.juan.crediya.model.user.UserGateway;
 import co.juan.crediya.usecase.loantype.LoanTypeUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -43,18 +49,26 @@ class ApplicationUseCaseTest {
     @Mock
     private UserGateway userGateway;
 
+    @Mock
+    NotificationGateway notificationGateway;
+
+    @Mock
+    DebtCapacityGateway debtCapacityGateway;
+
     private LoanType loanType;
     private Application application;
     private LoanApplicationDTO loanApplicationDTO;
     private User user;
 
     private final FilteredApplicationDto filteredApplicationDto =
-            new FilteredApplicationDto(new BigDecimal("1000"), 12,
+            new FilteredApplicationDto(1L, new BigDecimal("1000"), 12,
                     "juan.juan@gmail.com", "Pedro",
                     "Libre inversion", new BigDecimal(2),
                     "Pendiente de revision", new BigDecimal(10000),
                     new BigDecimal(100));
     private final long status = 1L;
+    private UpdateLoanApplicationRequestDto updateLoanApplicationRequestDto;
+    private AutomaticValidationDto automaticValidationDto;
 
     @BeforeEach
     void initMocks() {
@@ -92,6 +106,19 @@ class ApplicationUseCaseTest {
         user.setPhone("3210938475");
         user.setDni("1027384098");
         user.setRole(1L);
+
+        updateLoanApplicationRequestDto = new UpdateLoanApplicationRequestDto();
+        updateLoanApplicationRequestDto.setIdApplication(19L);
+        updateLoanApplicationRequestDto.setIdState(4L);
+
+        automaticValidationDto = new AutomaticValidationDto();
+        automaticValidationDto.setApplicationId(1L);
+        automaticValidationDto.setApplicantEmail("juandceballos12@gmail.com");
+        automaticValidationDto.setApplicantSalary(BigDecimal.TEN);
+        automaticValidationDto.setNewLoanAmount(BigDecimal.ONE);
+        automaticValidationDto.setNewLoanInterestRate(BigDecimal.ONE);
+        automaticValidationDto.setNewLoanTerm(12);
+        automaticValidationDto.setActiveLoans(List.of(filteredApplicationDto));
     }
 
     @Test
@@ -108,6 +135,8 @@ class ApplicationUseCaseTest {
         when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
         when(applicationRepository.saveApplication(any(Application.class))).thenReturn(Mono.just(application));
         when(userGateway.getUserByDni(anyString())).thenReturn(Mono.just(user));
+        when(applicationRepository.getApplicationsByUserEmailAndState(anyString(), anyLong())).thenReturn(Flux.just(filteredApplicationDto));
+        when(debtCapacityGateway.sendValidationMessage(any(AutomaticValidationDto.class))).thenReturn(Mono.empty());
 
         Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
 
@@ -118,6 +147,34 @@ class ApplicationUseCaseTest {
         verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
         verify(applicationRepository, times(1)).saveApplication(any(Application.class));
         verify(userGateway, times(1)).getUserByDni(anyString());
+        verify(applicationRepository, times(1)).getApplicationsByUserEmailAndState(anyString(), anyLong());
+    }
+
+    @Test
+    void saveApplication_shouldSave_when_automaticvalidation_false() {
+        loanType = new LoanType(
+                1L,
+                "Libre Inversion",
+                BigDecimal.ONE,
+                BigDecimal.TEN,
+                BigDecimal.ONE,
+                false
+        );
+
+        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
+        when(applicationRepository.saveApplication(any(Application.class))).thenReturn(Mono.just(application));
+        when(userGateway.getUserByDni(anyString())).thenReturn(Mono.just(user));
+
+        Mono<Application> response = applicationUseCase.saveApplication(loanApplicationDTO);
+
+        StepVerifier.create(response)
+                .expectNextMatches(value -> value.equals(application))
+                .verifyComplete();
+
+        verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
+        verify(applicationRepository, times(1)).saveApplication(any(Application.class));
+        verify(userGateway, times(1)).getUserByDni(anyString());
+        verify(applicationRepository, times(0)).getApplicationsByUserEmailAndState(anyString(), anyLong());
     }
 
     @Test
@@ -187,5 +244,55 @@ class ApplicationUseCaseTest {
         StepVerifier.create(response)
                 .expectNextMatches(value -> value.equals(allRows))
                 .verifyComplete();
+    }
+
+    @Test
+    void updateLoanApplication() {
+        when(applicationRepository.findApplicationById(anyLong())).thenReturn(Mono.just(application));
+        when(userGateway.getUserByEmail(anyString())).thenReturn(Mono.just(user));
+        when(loanTypeUseCase.getLoanTypeById(anyLong())).thenReturn(Mono.just(loanType));
+        when(applicationRepository.updateLoanApplication(any(UpdateLoanApplicationRequestDto.class)))
+                .thenReturn(Mono.just(application));
+        when(notificationGateway.sendNotification(any(FilteredApplicationDto.class))).thenReturn(Mono.empty());
+
+        Mono<FilteredApplicationDto> response = applicationUseCase.updateApplication(updateLoanApplicationRequestDto);
+
+        StepVerifier.create(response)
+                .expectNextMatches(value -> value.amount().equals(application.getAmount())
+                        && value.status().equalsIgnoreCase(Objects.requireNonNull(StatusEnum.getById(updateLoanApplicationRequestDto.getIdState())).getName()))
+                .verifyComplete();
+
+        verify(applicationRepository, times(1)).findApplicationById(anyLong());
+        verify(userGateway, times(1)).getUserByEmail(anyString());
+        verify(loanTypeUseCase, times(1)).getLoanTypeById(anyLong());
+        verify(applicationRepository, times(1)).updateLoanApplication(any(UpdateLoanApplicationRequestDto.class));
+    }
+
+    @Test
+    void updateLoanApplication_returnExceptionLoanApplication() {
+        application.setIdLoanType(5L);
+
+        when(applicationRepository.findApplicationById(anyLong())).thenThrow(new CrediYaException(ErrorCode.INVALID_LOAN_TYPE));
+
+        Executable executable = () -> applicationUseCase.updateApplication(updateLoanApplicationRequestDto);
+
+        CrediYaException exception = assertThrows(CrediYaException.class, executable);
+        assertEquals("There's not an application with that id", exception.getMessage());
+
+        verify(applicationRepository, times(1)).findApplicationById(anyLong());
+        verify(applicationRepository, times(0)).updateLoanApplication(any(UpdateLoanApplicationRequestDto.class));
+    }
+
+    @Test
+    void updateLoanApplication_returnExceptionStatus() {
+        when(applicationRepository.findApplicationById(anyLong())).thenThrow(new CrediYaException(ErrorCode.STATUS_NOT_CHANGED));
+
+        Executable executable = () -> applicationUseCase.updateApplication(updateLoanApplicationRequestDto);
+
+        CrediYaException exception = assertThrows(CrediYaException.class, executable);
+        assertEquals("The application with this id already has this status.", exception.getMessage());
+
+        verify(applicationRepository, times(1)).findApplicationById(anyLong());
+        verify(applicationRepository, times(0)).updateLoanApplication(any(UpdateLoanApplicationRequestDto.class));
     }
 }
